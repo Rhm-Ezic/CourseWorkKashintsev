@@ -6,14 +6,16 @@ import java.security.MessageDigest
 
 data class User(
     val phone: String,
-    val passwordHash: String
+    val passwordHash: String,
+    val role: String // "client" или "admin"
 )
 
 object UserManager {
     private const val PREFS_NAME = "fastfood_users"
     private const val KEY_LOGGED_IN_PHONE = "logged_in_phone"
     private const val KEY_USER_PREFIX = "user_"
-    private const val KEY_INITIALIZED = "test_accounts_initialized_v2"
+    private const val KEY_ROLE_PREFIX = "role_"
+    private const val KEY_INITIALIZED = "test_accounts_initialized_v3"
 
     private lateinit var prefs: SharedPreferences
 
@@ -26,33 +28,38 @@ object UserManager {
         val savedPhone = prefs.getString(KEY_LOGGED_IN_PHONE, null)
         if (savedPhone != null) {
             val hash = prefs.getString(KEY_USER_PREFIX + savedPhone, null)
+            val role = prefs.getString(KEY_ROLE_PREFIX + savedPhone, "client") ?: "client"
             if (hash != null) {
-                currentUser = User(savedPhone, hash)
+                currentUser = User(savedPhone, hash, role)
             }
         }
     }
 
     private fun addTestAccounts() {
         if (!prefs.getBoolean(KEY_INITIALIZED, false)) {
-            // Удаляем старые тестовые аккаунты без хеширования
             prefs.edit()
                 .remove(KEY_USER_PREFIX + "+79991234567")
                 .remove(KEY_USER_PREFIX + "+79997654321")
+                .remove(KEY_ROLE_PREFIX + "+79991234567")
+                .remove(KEY_ROLE_PREFIX + "+79997654321")
                 .apply()
 
-            // Создаём с хешированием
             val editor = prefs.edit()
-            editor.putString(KEY_USER_PREFIX + "+79991234567", hashPassword("test123"))
+            // Админский аккаунт
+            editor.putString(KEY_USER_PREFIX + "+79991234567", hashPassword("admin123"))
+            editor.putString(KEY_ROLE_PREFIX + "+79991234567", "admin")
+            // Клиентский аккаунт
             editor.putString(KEY_USER_PREFIX + "+79997654321", hashPassword("demo456"))
+            editor.putString(KEY_ROLE_PREFIX + "+79997654321", "client")
             editor.putBoolean(KEY_INITIALIZED, true)
             editor.apply()
         }
     }
 
-    fun getTestAccounts(): List<Pair<String, String>> {
+    fun getTestAccounts(): List<Triple<String, String, String>> {
         return listOf(
-            Pair("+79991234567", "test123"),
-            Pair("+79997654321", "demo456")
+            Triple("+79991234567", "admin123", "Админ"),
+            Triple("+79997654321", "demo456", "Клиент")
         )
     }
 
@@ -62,7 +69,10 @@ object UserManager {
             return false
         }
         val hash = hashPassword(password)
-        prefs.edit().putString(key, hash).apply()
+        prefs.edit()
+            .putString(key, hash)
+            .putString(KEY_ROLE_PREFIX + phone, "client")
+            .apply()
         return true
     }
 
@@ -71,7 +81,8 @@ object UserManager {
         val storedHash = prefs.getString(key, null)
         val inputHash = hashPassword(password)
         if (storedHash != null && storedHash == inputHash) {
-            currentUser = User(phone, storedHash)
+            val role = prefs.getString(KEY_ROLE_PREFIX + phone, "client") ?: "client"
+            currentUser = User(phone, storedHash, role)
             prefs.edit().putString(KEY_LOGGED_IN_PHONE, phone).apply()
             return true
         }
@@ -85,6 +96,10 @@ object UserManager {
 
     fun isLoggedIn(): Boolean {
         return currentUser != null
+    }
+
+    fun isAdmin(): Boolean {
+        return currentUser?.role == "admin"
     }
 
     private fun hashPassword(password: String): String {

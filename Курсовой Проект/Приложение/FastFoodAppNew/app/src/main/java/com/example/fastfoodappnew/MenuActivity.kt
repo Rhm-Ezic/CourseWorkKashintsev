@@ -32,6 +32,9 @@ class MenuActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_menu)
 
+        UserManager.init(this)
+        MenuData.init(this)
+
         btnBack = findViewById(R.id.btnBack)
         btnAccount = findViewById(R.id.btnAccount)
         rvMenu = findViewById(R.id.rvMenu)
@@ -71,7 +74,8 @@ class MenuActivity : AppCompatActivity() {
     private fun setupAccount() {
         val currentUser = UserManager.currentUser
         if (currentUser != null) {
-            btnAccount.text = "📱 ${currentUser.phone}"
+            val role = if (UserManager.isAdmin()) " (Админ)" else ""
+            btnAccount.text = "📱 ${currentUser.phone}$role"
             btnAccount.visibility = View.VISIBLE
         }
 
@@ -94,12 +98,13 @@ class MenuActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        showCategory(currentCategory)
         updateCartPanel()
     }
 
     private fun showCategory(category: String) {
         currentCategory = category
-        val filtered = MenuData.products.filter { it.category == category }
+        val filtered = MenuData.getProductsByCategory(category, adminMode = false)
         adapter.updateList(filtered)
     }
 

@@ -14,15 +14,27 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        UserManager.init(this)
+        MenuData.init(this)
+
         val btnMenu = findViewById<Button>(R.id.btnMenu)
         val btnCart = findViewById<Button>(R.id.btnCart)
         val btnAbout = findViewById<Button>(R.id.btnAbout)
         val btnAccount = findViewById<Button>(R.id.btnAccount)
+        val btnAdminMenu = findViewById<Button>(R.id.btnAdminMenu)
 
         val currentUser = UserManager.currentUser
         if (currentUser != null) {
-            btnAccount.text = "📱 ${currentUser.phone}"
+            val role = if (UserManager.isAdmin()) " (Админ)" else ""
+            btnAccount.text = "📱 ${currentUser.phone}$role"
             btnAccount.visibility = View.VISIBLE
+        }
+
+        // Показать кнопку управления меню только админу
+        if (UserManager.isAdmin()) {
+            btnAdminMenu.visibility = View.VISIBLE
+        } else {
+            btnAdminMenu.visibility = View.GONE
         }
 
         btnAccount.setOnClickListener { view ->
@@ -51,6 +63,10 @@ class MainActivity : AppCompatActivity() {
 
         btnAbout.setOnClickListener {
             Toast.makeText(this, "FastFood App v1.0", Toast.LENGTH_SHORT).show()
+        }
+
+        btnAdminMenu.setOnClickListener {
+            startActivity(Intent(this, AdminMenuActivity::class.java))
         }
     }
 }

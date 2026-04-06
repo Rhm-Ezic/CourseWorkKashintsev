@@ -24,6 +24,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         UserManager.init(this)
+        MenuData.init(this)
 
         if (UserManager.isLoggedIn()) {
             startActivity(Intent(this, MainActivity::class.java))
@@ -51,7 +52,6 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Извлекаем цифры и приводим к формату +7XXXXXXXXXX
             val phoneDigits = phoneFormatted.replace(Regex("[^0-9]"), "")
             val phoneToCheck = if (phoneDigits.length == 11) {
                 "+7" + phoneDigits.substring(phoneDigits.length - 10)
@@ -60,7 +60,8 @@ class LoginActivity : AppCompatActivity() {
             }
 
             if (UserManager.login(phoneToCheck, password)) {
-                Toast.makeText(this, "Добро пожаловать!", Toast.LENGTH_SHORT).show()
+                val role = if (UserManager.isAdmin()) "Админ" else "Клиент"
+                Toast.makeText(this, "Добро пожаловать! ($role)", Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this, MainActivity::class.java))
                 finish()
             } else {
@@ -76,19 +77,14 @@ class LoginActivity : AppCompatActivity() {
     private fun setupPhoneFormatter() {
         etPhone.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-
             override fun afterTextChanged(s: Editable?) {
                 if (isPhoneFormatting) return
                 isPhoneFormatting = true
-
                 val digits = s.toString().replace(Regex("[^0-9]"), "")
                 val formatted = formatPhoneNumber(digits)
-
                 etPhone.setText(formatted)
                 etPhone.setSelection(formatted.length)
-
                 isPhoneFormatting = false
             }
         })
@@ -106,7 +102,6 @@ class LoginActivity : AppCompatActivity() {
         }
 
         val sb = StringBuilder("+7")
-
         if (d.length > 1) {
             sb.append(" (")
             sb.append(d.substring(1, minOf(d.length, 4)))
@@ -123,7 +118,6 @@ class LoginActivity : AppCompatActivity() {
             sb.append("-")
             sb.append(d.substring(9, minOf(d.length, 11)))
         }
-
         return sb.toString()
     }
 
@@ -131,8 +125,8 @@ class LoginActivity : AppCompatActivity() {
         val testAccounts = UserManager.getTestAccounts()
         for (account in testAccounts) {
             val btn = Button(this).apply {
-                text = "📱 ${account.first} / ${account.second}"
-                textSize = 13f
+                text = "📱 ${account.first} / ${account.second} (${account.third})"
+                textSize = 12f
                 isAllCaps = false
                 setBackgroundColor(0x22000000)
                 setTextColor(0xFF333333.toInt())
